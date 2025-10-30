@@ -1,15 +1,17 @@
-
 # Importando as bibliotecas necessárias.
 import pygame
-import random
+from os import path
+
+# Estabelece a pasta que contem as figuras
+img_dir = path.join(path.dirname(__file__), 'img')
 
 # Dados gerais do jogo.
-TITULO = 'Exemplo de Pulo com obstáculos'
+TITULO = 'Dino Jump Game'
 WIDTH = 480 # Largura da tela
 HEIGHT = 600 # Altura da tela
-TILE_SIZE = 40 # Tamanho de cada tile (cada tile é um quadrado)
-PLAYER_WIDTH = TILE_SIZE
-PLAYER_HEIGHT = int(TILE_SIZE * 1.5)
+TILE_SIZE = 40 # Tamanho de cada tile
+PLAYER_WIDTH = 24
+PLAYER_HEIGHT = 24
 FPS = 60 # Frames por segundo
 
 # Define algumas variáveis com as cores básicas
@@ -20,13 +22,14 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
 CYAN = (0, 255, 255)
+SKY_BLUE = (135, 206, 235)
 
 # Define a aceleração da gravidade
 GRAVITY = 5
 # Define a velocidade inicial no pulo
 JUMP_SIZE = TILE_SIZE
 # Define a velocidade em x
-SPEED_X = 3
+SPEED_X = 5
 
 # Define os tipos de tiles
 BLOCK = 0
@@ -64,23 +67,31 @@ class Tile(pygame.sprite.Sprite):
         # Cria uma superfície para o bloco
         self.image = pygame.Surface((TILE_SIZE, TILE_SIZE))
         self.image.fill(GREEN)
+        pygame.draw.rect(self.image, (0, 200, 0), (0, 0, TILE_SIZE, TILE_SIZE), 2)
         
         self.rect = self.image.get_rect()
         self.rect.x = TILE_SIZE * column
         self.rect.y = TILE_SIZE * row
 
 
-# Classe Jogador que representa o herói
+# Classe Jogador que representa o Dino
 class Player(pygame.sprite.Sprite):
-    def __init__(self, row, column, blocks):
+    def __init__(self, row, column, blocks, sprites):
         pygame.sprite.Sprite.__init__(self)
         
         self.state = STILL
+        self.sprites = sprites
         
-        # Cria uma superfície simples para o jogador
-        self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
-        self.image.fill(CYAN)  # Jogador em ciano
+        # Animação
+        self.current_frame = 0
+        self.frame_ticks = 0
+        self.frame_rate = 8  # Troca de frame a cada 8 ticks
         
+        # Direção que o personagem está olhando
+        self.facing_right = True
+        
+        # Define a imagem inicial
+        self.image = self.sprites['idle'][0]
         self.rect = self.image.get_rect()
         self.blocks = blocks
         
@@ -92,6 +103,27 @@ class Player(pygame.sprite.Sprite):
         self.speedy = 0
 
     def update(self):
+        # Atualiza animação
+        self.frame_ticks += 1
+        if self.frame_ticks >= self.frame_rate:
+            self.frame_ticks = 0
+            
+            # Escolhe a animação apropriada
+            if self.state == JUMPING or self.state == FALLING:
+                anim = self.sprites['jump']
+            elif self.speedx != 0:
+                anim = self.sprites['run']
+            else:
+                anim = self.sprites['idle']
+            
+            # Avança o frame
+            self.current_frame = (self.current_frame + 1) % len(anim)
+            self.image = anim[self.current_frame]
+            
+            # Vira o sprite se necessário
+            if not self.facing_right:
+                self.image = pygame.transform.flip(self.image, True, False)
+        
         # Trata movimento vertical
         self.speedy += GRAVITY
         
@@ -115,6 +147,12 @@ class Player(pygame.sprite.Sprite):
         # Trata movimento horizontal
         self.rect.x += self.speedx
         
+        # Atualiza direção
+        if self.speedx > 0:
+            self.facing_right = True
+        elif self.speedx < 0:
+            self.facing_right = False
+        
         if self.rect.left < 0:
             self.rect.left = 0
         elif self.rect.right >= WIDTH:
@@ -134,14 +172,51 @@ class Player(pygame.sprite.Sprite):
             self.state = JUMPING
 
 
+def load_sprite_sheet(filename, frame_width, frame_height, num_frames):
+    """Carrega um sprite sheet e retorna uma lista de frames"""
+    sprite_sheet = pygame.image.load(filename).convert_alpha()
+    frames = []
+    
+    for i in range(num_frames):
+        frame = sprite_sheet.subsurface((i * frame_width, 0, frame_width, frame_height))
+        # Aumenta o tamanho do sprite 2x para ficar melhor visível
+        frame = pygame.transform.scale(frame, (frame_width * 2, frame_height * 2))
+        frames.append(frame)
+    
+    return frames
+
+
+def load_assets(img_dir):
+    """Carrega todos os sprites do Dino"""
+    assets = {}
+    
+    # Carrega o sprite sheet do Dino azul
+    sprite_file = path.join(img_dir, 'DinoSprites - doux.png')
+    
+    # O sprite sheet tem 24 frames de 24x24 pixels
+    # Frames 0-3: idle
+    # Frames 4-9: run
+    # Frames 10-11: kick (vamos usar como jump)
+    all_frames = load_sprite_sheet(sprite_file, 24, 24, 24)
+    
+    assets['idle'] = all_frames[0:4]
+    assets['run'] = all_frames[4:10]
+    assets['jump'] = all_frames[10:12]
+    
+    return assets
+
+
 def game_screen(screen):
     clock = pygame.time.Clock()
+    
+    # Carrega os sprites do Dino
+    sprites = load_assets(img_dir)
     
     all_sprites = pygame.sprite.Group()
     blocks = pygame.sprite.Group()
     
-    # Cria Sprite do jogador (sem imagem, apenas cor)
-    player = Player(12, 2, blocks)
+    # Cria Sprite do jogador com os sprites carregados
+    player = Player(12, 2, blocks, sprites)
     
     # Cria tiles de acordo com o mapa
     for row in range(len(MAP)):
@@ -181,7 +256,8 @@ def game_screen(screen):
         
         all_sprites.update()
         
-        screen.fill(BLACK)
+        # Fundo azul céu
+        screen.fill(SKY_BLUE)
         all_sprites.draw(screen)
         
         pygame.display.flip()
@@ -198,6 +274,7 @@ print('*' * len(TITULO))
 print(TITULO.upper())
 print('*' * len(TITULO))
 print('Utilize as setas do teclado para andar e pular.')
+print('O Dino azul está animado!')
 
 try:
     game_screen(screen)
