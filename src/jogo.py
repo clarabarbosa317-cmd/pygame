@@ -5,6 +5,7 @@ from settings import TITULO, WIDTH, HEIGHT, FPS
 from assets import load_player_sprites, load_sounds
 from sprites import Player
 from level import load_level, build_level_surface
+from menu import show_menu
 
 class Game:
     def __init__(self):
@@ -77,4 +78,10 @@ class Game:
         pygame.quit()
 
 if __name__ == "__main__":
-    Game().run()
+    # Mostra o menu primeiro
+    if show_menu():
+        # Se o jogador escolheu iniciar, roda o jogo
+        Game().run()
+    else:
+        # Se escolheu sair, apenas encerra
+        pygame.quit()
