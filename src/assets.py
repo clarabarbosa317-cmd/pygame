@@ -46,6 +46,7 @@ def load_tile_textures():
       aberto_meio_grama_cima_baixo, aberto_meio_grama_lados,
       chao_pedra, rampa_sobe, rampa_desce
     """
+def load_tile_textures():
     names = [
         "fechado.png",
         "fechado_cima.png",
@@ -57,11 +58,12 @@ def load_tile_textures():
         "chao_pedra.png",
         "rampa_sobe.png",
         "rampa_desce.png",
+        "espinho.png",                     # <<< NOVO
     ]
     tex = {}
     for fname in names:
         key = fname.replace(".png", "")
-        tex[key] = _scale_to_tile(load_image(fname))
+        tex[key] = _scale_to_tile(load_image(fname))  # escala para TILE (nearest)
     return tex
 
 def load_sounds():

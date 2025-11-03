@@ -87,8 +87,10 @@ def load_level(level_path, groups):
                 all_tiles.add(t); color_tiles.add(t)
 
             elif ch == "X":
-                t = Tile(x, y, None, deadly=True)
+                # antes: t = Tile(x, y, None, deadly=True)
+                t = Tile(x, y, tex["espinho"], deadly=True)      # <<< usa a textura
                 all_tiles.add(t); hazards.add(t)
+
 
             elif ch == "G":
                 t = Tile(x, y, None, goal_for="red")
