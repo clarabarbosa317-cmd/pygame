@@ -55,6 +55,32 @@ class Tile(pygame.sprite.Sprite):
         return self.surface_y(world_x - self.rect.left)
 
 
+class AnimatedTile(pygame.sprite.Sprite):
+    """
+    Tile com animação (para portais, etc)
+    """
+    def __init__(self, x, y, frames, *, solid=False, deadly=False,
+                 color_kind=None, goal_for=None):
+        super().__init__()
+        self.solid = solid
+        self.deadly = deadly
+        self.color_kind = color_kind
+        self.goal_for = goal_for
+        self.slope = None  # Tiles animados não são rampas
+        
+        self.frames = frames
+        self.anim_index = 0.0
+        self.anim_speed = 8.0  # frames por segundo
+        
+        self.image = self.frames[0]
+        self.rect = self.image.get_rect(topleft=(x, y))
+    
+    def update(self, dt):
+        """Atualiza a animação"""
+        self.anim_index = (self.anim_index + self.anim_speed * dt) % len(self.frames)
+        self.image = self.frames[int(self.anim_index)]
+
+
 # ------------------- PLAYER -------------------
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, color_name, frames):

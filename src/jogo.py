@@ -2,7 +2,7 @@ import pygame
 from os import path
 
 from settings import TITULO, WIDTH, HEIGHT, FPS
-from assets import load_player_sprites, load_sounds
+from assets import load_player_sprites, load_sounds, load_image
 from sprites import Player
 from level import load_level, build_level_surface
 from menu import show_menu
@@ -61,6 +61,11 @@ class Game:
                     self.reset_level()
 
             keys = pygame.key.get_pressed()
+
+            # Atualiza tiles animados (portais)
+            for tile in self.all_tiles:
+                if hasattr(tile, 'update'):
+                    tile.update(dt)
 
             self.p1.update(keys, self.solids, self.color_tiles, self.hazards, self.doors, self.ramps,
                            (pygame.K_a, pygame.K_d, pygame.K_w), dt)
