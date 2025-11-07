@@ -3,10 +3,18 @@ from settings import TILE, WIDTH, HEIGHT, COLS, ROWS, NEUTRAL, RED, BLUE, HAZARD
 from sprites import Tile, AnimatedTile
 from assets import load_tile_textures, load_image
 
-# Legenda extra:
-# '/' → rampa_sobe  (sobe para a direita)
-# '\' → rampa_desce (desce para a direita)
-# (demais símbolos iguais: '#', 'R', 'B', 'X', 'G', 'H', '1', '2', '.')
+# Legenda dos níveis:
+# '.' = vazio
+# '#' = bloco sólido
+# 'X' = spike (mata)
+# '/' = rampa sobe (para direita)
+# '\' = rampa desce (para direita)
+# 'R' = tile vermelho (só dino vermelho pode pisar)
+# 'B' = tile azul (só dino azul pode pisar)
+# 'G' = portal VERMELHO (goal para dino vermelho)
+# 'H' = portal AZUL (goal para dino azul)
+# '1' = spawn do dino vermelho
+# '2' = spawn do dino azul
 
 def _normalize_lines(lines):
     lines = [line.rstrip("\n") for line in lines]
@@ -90,8 +98,20 @@ def load_level(level_path, groups):
 
     spawns = {"red": None, "blue": None}
 
-    with open(level_path, "r", encoding="utf-8") as f:
-        lines = _normalize_lines(f.readlines())
+    try:
+        with open(level_path, "r", encoding="utf-8") as f:
+            lines = _normalize_lines(f.readlines())
+    except FileNotFoundError:
+        print(f"ERRO: Arquivo de nível não encontrado: {level_path}")
+        # Cria um nível vazio de emergência
+        lines = ["." * COLS for _ in range(ROWS)]
+        # Adiciona chão
+        lines[-1] = "#" * COLS
+        # Adiciona spawns
+        lines[-2] = list(lines[-2])
+        lines[-2][5] = "1"
+        lines[-2][10] = "2"
+        lines[-2] = "".join(lines[-2])
 
     tex = load_tile_textures()
     grid = [list(line) for line in lines]
@@ -129,14 +149,14 @@ def load_level(level_path, groups):
                 t = Tile(x, y, tex["espinho"], deadly=True)
                 all_tiles.add(t); hazards.add(t)
 
-            elif ch == "G":  # Portal vermelho (animado)
+            elif ch == "G":  # Portal VERMELHO (goal para dino vermelho)
                 if portal_red_frames:
                     t = AnimatedTile(x, y, portal_red_frames, goal_for="red")
                 else:
                     t = Tile(x, y, None, goal_for="red")
                 all_tiles.add(t); doors.add(t)
 
-            elif ch == "H":  # Portal azul (animado)
+            elif ch == "H":  # Portal AZUL (goal para dino azul)
                 if portal_blue_frames:
                     t = AnimatedTile(x, y, portal_blue_frames, goal_for="blue")
                 else:
@@ -148,8 +168,14 @@ def load_level(level_path, groups):
             elif ch == "2":
                 spawns["blue"] = (x + TILE // 2, y + TILE)
 
-    if spawns["red"]  is None: spawns["red"]  = (TILE*2 + TILE//2, TILE*2)
-    if spawns["blue"] is None: spawns["blue"] = (TILE*4 + TILE//2, TILE*2)
+    # Spawns padrão caso não encontre no mapa
+    if spawns["red"]  is None: 
+        spawns["red"]  = (TILE*2 + TILE//2, HEIGHT - TILE*3)
+        print("Aviso: Spawn do dino vermelho (1) não encontrado, usando posição padrão")
+    if spawns["blue"] is None: 
+        spawns["blue"] = (TILE*4 + TILE//2, HEIGHT - TILE*3)
+        print("Aviso: Spawn do dino azul (2) não encontrado, usando posição padrão")
+    
     return spawns
 
 def build_level_surface(all_tiles):
