@@ -29,3 +29,22 @@ HAZARD  = (200, 200, 40)
 GOAL_R  = (200, 80, 150)
 GOAL_B  = (80, 200, 150)
 BG      = (25, 30, 40)
+
+# ----- Temporizador por fase -----
+# Tempo padrão para um nível (em segundos) se não estiver especificado em LEVEL_TIMES
+DEFAULT_LEVEL_TIME = 60
+
+# Ajuste os tempos por nível aqui, se desejar
+LEVEL_TIMES = {
+    1: 60,
+    2: 70,
+    3: 80,
+    4: 90,
+    5: 100,
+    6: 110,
+}
+
+# Cores do HUD do tempo
+TIMER_OK   = (180, 255, 180)
+TIMER_WARN = (255, 220, 150)
+TIMER_DANG = (255, 120, 120)

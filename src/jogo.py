@@ -1,7 +1,7 @@
 import pygame
 from os import path
 
-from settings import TITULO, WIDTH, HEIGHT, FPS
+from settings import TITULO, WIDTH, HEIGHT, FPS, LEVEL_TIMES, DEFAULT_LEVEL_TIME, TIMER_OK, TIMER_WARN, TIMER_DANG
 from assets import load_player_sprites, load_sounds
 from sprites import Player
 from level import load_level, build_level_surface
@@ -19,7 +19,7 @@ class Game:
         self.current_level = 1
         self.total_levels = 6
         self.level_complete_timer = 0
-        self.level_complete_delay = 1.0  # 2 segundos antes de avançar
+        self.level_complete_delay = 1.0  # atraso antes de avançar de fase
 
         # Assets
         self.player_frames = load_player_sprites()
@@ -30,12 +30,17 @@ class Game:
         self.small_font = pygame.font.Font(None, 32)
 
         self.running = True
-        
-        # Carrega o primeiro nível
+
+        # Timer do nível (valores serão definidos em load_current_level)
+        self.level_time_limit = 0
+        self.level_start_ticks = 0
+        self.level_time_left = 0.0
+
+        # Carrega o primeiro nível (aqui configuramos o timer também)
         self.load_current_level()
 
     def load_current_level(self):
-        """Carrega o nível atual"""
+        """Carrega o nível atual e reseta tudo que é per-fase (inclui timer)."""
         # Limpa grupos anteriores
         self.all_tiles = pygame.sprite.Group()
         self.solids = pygame.sprite.Group()
@@ -71,7 +76,7 @@ class Game:
             self.p1.rect.midbottom = spawns["red"]
             self.p1.spawn.update(spawns["red"])
             self.p1._respawn()
-            
+
             self.p2.rect.midbottom = spawns["blue"]
             self.p2.spawn.update(spawns["blue"])
             self.p2._respawn()
@@ -82,6 +87,11 @@ class Game:
         print(f"\n{'='*50}")
         print(f"NÍVEL {self.current_level} CARREGADO")
         print(f"{'='*50}\n")
+
+        # >>> Configura timer do nível (AQUI é o lugar certo)
+        self.level_time_limit = LEVEL_TIMES.get(self.current_level, DEFAULT_LEVEL_TIME)
+        self.level_start_ticks = pygame.time.get_ticks()
+        self.level_time_left = float(self.level_time_limit)
 
     def check_level_complete(self):
         """Verifica se o nível foi completado"""
@@ -104,6 +114,9 @@ class Game:
         for p in (self.p1, self.p2):
             p._respawn()
         self.level_complete_timer = 0
+        # Reinicia o timer do level atual
+        self.level_start_ticks = pygame.time.get_ticks()
+        self.level_time_left = float(self.level_time_limit)
 
     def show_victory_screen(self):
         """Mostra tela de vitória"""
@@ -125,7 +138,7 @@ class Game:
 
             # Desenha tela de vitória
             self.screen.fill((20, 20, 40))
-            
+
             # Título
             title = self.font.render("VITÓRIA!", True, (255, 255, 100))
             title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 3))
@@ -148,11 +161,75 @@ class Game:
             pygame.display.flip()
             self.clock.tick(FPS)
 
+    def show_game_over_screen(self):
+        """Mostra a tela de GAME OVER e volta ao menu."""
+        waiting = True
+        while waiting:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    waiting = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        # Volta ao menu e, se escolher jogar, reinicia do nível 1
+                        if show_menu():
+                            self.current_level = 1
+                            self.load_current_level()
+                        else:
+                            self.running = False
+                        waiting = False
+                    elif event.key == pygame.K_ESCAPE:
+                        # Também abre o menu/encerra
+                        if show_menu():
+                            self.current_level = 1
+                            self.load_current_level()
+                        else:
+                            self.running = False
+                        waiting = False
+
+            # Tela
+            self.screen.fill((15, 10, 18))
+            title = self.font.render("GAME OVER", True, (255, 110, 110))
+            title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 3))
+            self.screen.blit(title, title_rect)
+
+            msg = self.small_font.render("O tempo acabou!", True, (220, 220, 220))
+            msg_rect = msg.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            self.screen.blit(msg, msg_rect)
+
+            inst = self.small_font.render("ENTER - Menu | ESC - Sair", True, (160, 160, 160))
+            inst_rect = inst.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 60))
+            self.screen.blit(inst, inst_rect)
+
+            pygame.display.flip()
+            self.clock.tick(FPS)
+
     def draw_ui(self):
         """Desenha interface do usuário"""
         # Nível atual
         level_text = self.font.render(f"Nível {self.current_level}/{self.total_levels}", True, (255, 255, 255))
         self.screen.blit(level_text, (10, 10))
+
+        # Temporizador (canto superior direito)
+        if self.level_time_limit > 0:
+            secs = int(max(0, round(self.level_time_left)))
+            mm = secs // 60
+            ss = secs % 60
+            timer_str = f"{mm:02d}:{ss:02d}"
+            # Cor por urgência
+            if secs <= 10:
+                color = TIMER_DANG
+            elif secs <= 20:
+                color = TIMER_WARN
+            else:
+                color = TIMER_OK
+            txt = self.font.render(timer_str, True, color)
+            rect = txt.get_rect(topright=(WIDTH - 12, 10))
+            # leve sombra
+            shadow = self.font.render(timer_str, True, (0, 0, 0))
+            srect = shadow.get_rect(topright=(WIDTH - 12 + 2, 12))
+            self.screen.blit(shadow, srect)
+            self.screen.blit(txt, rect)
 
         # Instruções (canto inferior)
         help_text = self.small_font.render("R - Reiniciar | ESC - Menu", True, (200, 200, 200))
@@ -163,13 +240,13 @@ class Game:
         if self.level_complete_timer > 0:
             complete_text = self.font.render("NÍVEL COMPLETO!", True, (100, 255, 100))
             complete_rect = complete_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-            
+
             # Fundo semi-transparente
             s = pygame.Surface((complete_rect.width + 40, complete_rect.height + 20))
             s.set_alpha(200)
             s.fill((0, 0, 0))
             self.screen.blit(s, (complete_rect.x - 20, complete_rect.y - 10))
-            
+
             self.screen.blit(complete_text, complete_rect)
 
             # Próximo nível ou vitória
@@ -177,14 +254,23 @@ class Game:
                 next_text = self.small_font.render(f"Próximo: Nível {self.current_level + 1}", True, (200, 200, 200))
             else:
                 next_text = self.small_font.render("Último nível completado!", True, (255, 255, 100))
-            
+
             next_rect = next_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
             self.screen.blit(next_text, next_rect)
 
     def run(self):
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
-            
+
+            # Atualiza timer do nível (não desconta se já completou)
+            if self.level_time_limit > 0 and self.level_complete_timer <= 0:
+                elapsed = (pygame.time.get_ticks() - self.level_start_ticks) / 1000.0
+                self.level_time_left = max(0.0, self.level_time_limit - elapsed)
+                if self.level_time_left <= 0.0 and not self.check_level_complete():
+                    # Tempo acabou
+                    self.show_game_over_screen()
+                    continue
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
@@ -208,10 +294,10 @@ class Game:
 
             # Atualiza jogadores apenas se não estiver no delay de conclusão
             if self.level_complete_timer <= 0:
-                self.p1.update(keys, self.solids, self.color_tiles, self.hazards, 
-                             self.doors, self.ramps, (pygame.K_a, pygame.K_d, pygame.K_w), dt)
-                self.p2.update(keys, self.solids, self.color_tiles, self.hazards, 
-                             self.doors, self.ramps, (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP), dt)
+                self.p1.update(keys, self.solids, self.color_tiles, self.hazards,
+                               self.doors, self.ramps, (pygame.K_a, pygame.K_d, pygame.K_w), dt)
+                self.p2.update(keys, self.solids, self.color_tiles, self.hazards,
+                               self.doors, self.ramps, (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP), dt)
 
             # Verifica conclusão do nível
             if self.check_level_complete() and self.level_complete_timer <= 0:
@@ -227,7 +313,7 @@ class Game:
             self.screen.blit(self.level_surface, (0, 0))
             self.players.draw(self.screen)
             self.draw_ui()
-            
+
             pygame.display.flip()
 
         pygame.quit()
