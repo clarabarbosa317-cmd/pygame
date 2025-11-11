@@ -1,4 +1,3 @@
-# Configurações gerais do jogo
 TITULO = "Dino Escape — Tela fixa (tile menor)"
 
 # Janela fixa
@@ -42,6 +41,16 @@ LEVEL_TIMES = {
     4: 90,
     5: 100,
     6: 110,
+}
+
+# Nomes dos níveis
+LEVEL_NAMES = {
+    1: "Primeiros Passos",
+    2: "Plataformas Coloridas",
+    3: "Campo Minado",
+    4: "Saltos Precisos",
+    5: "Corrida Contra o Tempo",
+    6: "Desafio Final",
 }
 
 # Cores do HUD do tempo
