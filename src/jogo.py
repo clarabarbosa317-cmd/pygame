@@ -1,14 +1,12 @@
 import pygame
 from os import path
 
-from settings import TITULO, WIDTH, HEIGHT, FPS, LEVEL_TIMES, DEFAULT_LEVEL_TIME, TIMER_OK, TIMER_WARN, TIMER_DANG, BG
+from settings import TITULO, WIDTH, HEIGHT, FPS, LEVEL_TIMES, DEFAULT_LEVEL_TIME, TIMER_OK, TIMER_WARN, TIMER_DANG, BG, LEVEL_NAMES
 from assets import load_player_sprites, load_sounds, load_backgrounds
 from sprites import Player
 from level import load_level, build_level_surface
 from menu import show_menu
-from tutorial import Tutorial
-from menu import show_menu  # já existe
-
+from tutorial import show_tutorial
 
 class Game:
     def __init__(self):
@@ -95,6 +93,10 @@ class Game:
         self.level_time_limit = LEVEL_TIMES.get(self.current_level, DEFAULT_LEVEL_TIME)
         self.level_start_ticks = pygame.time.get_ticks()
         self.level_time_left = float(self.level_time_limit)
+        
+        # Pause state
+        self.paused = False
+        self.pause_ticks = 0
 
     def show_victory_screen(self):
         """Mostra tela de vitória"""
@@ -205,6 +207,101 @@ class Game:
             self.show_victory_screen()
         else:
             self.load_current_level()
+    
+    def show_pause_menu(self):
+        """Mostra menu de pausa com design melhorado"""
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))  # Semi-transparent black
+        
+        # Panel for menu
+        panel_w, panel_h = 500, 400
+        panel_x = (WIDTH - panel_w) // 2
+        panel_y = (HEIGHT - panel_h) // 2
+        
+        paused = True
+        anim_time = 0.0
+        
+        while paused and self.running:
+            dt = self.clock.tick(FPS) / 1000.0
+            anim_time += dt
+            
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    paused = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_p:
+                        paused = False
+                        self.paused = False
+                    elif event.key == pygame.K_r:
+                        # Restart level
+                        self.load_current_level()
+                        paused = False
+                        self.paused = False
+                    elif event.key == pygame.K_q:
+                        start_game, show_tut = show_menu()
+                        if show_tut:
+                            if show_tutorial():
+                                self.current_level = 1
+                                self.load_current_level()
+                        elif start_game:
+                            self.current_level = 1
+                            self.load_current_level()
+                        else:
+                            self.running = False
+                        paused = False
+                        self.paused = False
+            
+            # Draw game state underneath
+            if getattr(self, 'current_background', None) is not None:
+                self.screen.blit(self.current_background, (0, 0))
+            else:
+                self.screen.fill(BG)
+            self.screen.blit(self.level_surface, (0, 0))
+            self.players.draw(self.screen)
+            self.draw_ui()
+            
+            # Draw pause overlay
+            self.screen.blit(overlay, (0, 0))
+            
+            # Draw panel
+            panel_surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+            pygame.draw.rect(panel_surf, (35, 40, 55, 240), (0, 0, panel_w, panel_h), border_radius=20)
+            pygame.draw.rect(panel_surf, (100, 200, 255), (0, 0, panel_w, panel_h), 4, border_radius=20)
+            self.screen.blit(panel_surf, (panel_x, panel_y))
+            
+            # Draw pause title with pulsing effect
+            import math
+            pulse = 1.0 + 0.1 * math.sin(anim_time * 3)
+            title = self.font.render("|| PAUSADO", True, (255, 255, 255))
+            title_scaled = pygame.transform.scale(title, (int(title.get_width() * pulse), int(title.get_height() * pulse)))
+            title_rect = title_scaled.get_rect(center=(WIDTH // 2, panel_y + 70))
+            self.screen.blit(title_scaled, title_rect)
+            
+            # Menu options with icons (usando símbolos simples que funcionam)
+            options = [
+                (">", "ESC/P", "Continuar", (100, 220, 100)),
+                ("R", "R", "Reiniciar Nivel", (220, 180, 100)),
+                ("X", "Q", "Voltar ao Menu", (220, 100, 100))
+            ]
+            
+            y_offset = panel_y + 160
+            for icon, key, text, color in options:
+                # Icon
+                icon_surf = self.font.render(icon, True, color)
+                self.screen.blit(icon_surf, (panel_x + 50, y_offset - 5))
+                
+                # Key
+                key_surf = self.small_font.render(f"[{key}]", True, (180, 180, 180))
+                self.screen.blit(key_surf, (panel_x + 120, y_offset + 5))
+                
+                # Text
+                text_surf = self.small_font.render(text, True, (220, 220, 220))
+                self.screen.blit(text_surf, (panel_x + 200, y_offset + 5))
+                
+                y_offset += 70
+            
+            pygame.display.flip()
 
     def run(self):
         while self.running:
@@ -213,6 +310,14 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_p:
+                        self.paused = True
+                        self.pause_ticks = pygame.time.get_ticks()
+                        self.show_pause_menu()
+                        # Adjust timer for pause duration
+                        pause_duration = (pygame.time.get_ticks() - self.pause_ticks) / 1000.0
+                        self.level_start_ticks += int(pause_duration * 1000)
 
             # Atualiza timer do nível
             elapsed = (pygame.time.get_ticks() - self.level_start_ticks) / 1000.0
@@ -260,19 +365,13 @@ class Game:
 
 
 if __name__ == "__main__":
-    if show_menu():
-        game = Game()
-        # Mostra tutorial (passa screen, fontes, clock e FPS do próprio jogo)
-        tut = Tutorial(
-            screen=game.screen,
-            font=game.font,
-            small_font=game.small_font,
-            clock=game.clock,
-            fps=FPS,                 # use a constante já definida no seu projeto
-            show_menu_cb=show_menu,  # ESC no tutorial retorna ao menu
-        )
-        if tut.run() and game.running:
-            game.run()
-    else:
-        pygame.quit()
+    start_game, show_tut = show_menu()
+    
+    if show_tut:
+        if show_tutorial():
+            Game().run()
+    elif start_game:
+        Game().run()
+    
+    pygame.quit()
 

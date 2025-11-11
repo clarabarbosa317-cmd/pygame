@@ -5,27 +5,66 @@ from settings import WIDTH, HEIGHT, FPS, BG
 from assets import load_player_sprites, load_image
 
 class MenuButton:
-    def __init__(self, x, y, width, height, text, color, hover_color):
+    def __init__(self, x, y, width, height, text, color, hover_color, icon=None):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.color = color
         self.hover_color = hover_color
         self.is_hovered = False
+        self.icon = icon
+        self.hover_scale = 1.0
+        self.target_scale = 1.0
+        
+    def update(self, dt):
+        """Animação suave ao passar o mouse"""
+        self.target_scale = 1.05 if self.is_hovered else 1.0
+        self.hover_scale += (self.target_scale - self.hover_scale) * 10 * dt
         
     def draw(self, screen, font):
+        # Calcular retângulo escalado
+        scale = self.hover_scale
+        scaled_w = int(self.rect.width * scale)
+        scaled_h = int(self.rect.height * scale)
+        scaled_rect = pygame.Rect(0, 0, scaled_w, scaled_h)
+        scaled_rect.center = self.rect.center
+        
         color = self.hover_color if self.is_hovered else self.color
-        # Sombra do botão
-        shadow_rect = self.rect.copy()
-        shadow_rect.x += 4
-        shadow_rect.y += 4
-        pygame.draw.rect(screen, (0, 0, 0), shadow_rect, border_radius=10)
+        
+        # Sombra do botão (mais pronunciada quando hover)
+        shadow_offset = 6 if self.is_hovered else 4
+        shadow_rect = scaled_rect.copy()
+        shadow_rect.x += shadow_offset
+        shadow_rect.y += shadow_offset
+        shadow_surf = pygame.Surface((shadow_rect.width, shadow_rect.height), pygame.SRCALPHA)
+        pygame.draw.rect(shadow_surf, (0, 0, 0, 120), (0, 0, shadow_rect.width, shadow_rect.height), border_radius=12)
+        screen.blit(shadow_surf, shadow_rect)
+        
         # Botão principal
-        pygame.draw.rect(screen, color, self.rect, border_radius=10)
-        pygame.draw.rect(screen, (255, 255, 255), self.rect, 3, border_radius=10)
+        pygame.draw.rect(screen, color, scaled_rect, border_radius=12)
+        
+        # Highlight no topo (efeito de brilho)
+        highlight_rect = pygame.Rect(scaled_rect.x + 5, scaled_rect.y + 5, scaled_rect.width - 10, scaled_rect.height // 3)
+        highlight_surf = pygame.Surface((highlight_rect.width, highlight_rect.height), pygame.SRCALPHA)
+        pygame.draw.rect(highlight_surf, (255, 255, 255, 40), (0, 0, highlight_rect.width, highlight_rect.height), border_radius=8)
+        screen.blit(highlight_surf, highlight_rect)
+        
+        # Borda brilhante
+        border_color = (255, 255, 255) if self.is_hovered else (200, 200, 200)
+        border_width = 4 if self.is_hovered else 3
+        pygame.draw.rect(screen, border_color, scaled_rect, border_width, border_radius=12)
+        
+        # Ícone (se houver) - usando fonte maior para ícone
+        if self.icon:
+            icon_font = pygame.font.Font(None, 56)
+            icon_surf = icon_font.render(self.icon, True, (255, 255, 255))
+            icon_rect = icon_surf.get_rect(midleft=(scaled_rect.left + 30, scaled_rect.centery))
+            screen.blit(icon_surf, icon_rect)
         
         # Texto
         text_surf = font.render(self.text, True, (255, 255, 255))
-        text_rect = text_surf.get_rect(center=self.rect.center)
+        text_rect = text_surf.get_rect(center=scaled_rect.center)
+        if self.icon:
+            text_rect.x += 15  # Offset if there's an icon
         screen.blit(text_surf, text_rect)
         
     def check_hover(self, mouse_pos):
@@ -74,25 +113,32 @@ class Menu:
         self.button_font = pygame.font.Font(None, 48)
         self.subtitle_font = pygame.font.Font(None, 36)
         
-        # Botões
-        button_width = 250
-        button_height = 70
+        # Botões (mais largos e com ícones)
+        button_width = 300
+        button_height = 75
         button_x = WIDTH // 2 - button_width // 2
         
         self.btn_start = MenuButton(
-            button_x, HEIGHT // 2 + 50, 
+            button_x, HEIGHT // 2 + 20, 
             button_width, button_height,
-            "INICIAR", (70, 180, 70), (90, 220, 90)
+            "JOGAR", (70, 180, 70), (90, 220, 90), ">"
+        )
+        
+        self.btn_tutorial = MenuButton(
+            button_x, HEIGHT // 2 + 110,
+            button_width, button_height,
+            "TUTORIAL", (70, 120, 220), (90, 150, 255), "?"
         )
         
         self.btn_quit = MenuButton(
-            button_x, HEIGHT // 2 + 150,
+            button_x, HEIGHT // 2 + 200,
             button_width, button_height,
-            "SAIR", (180, 70, 70), (220, 90, 90)
+            "SAIR", (180, 70, 70), (220, 90, 90), "X"
         )
         
         self.running = True
         self.start_game = False
+        self.show_tutorial = False
         
         # Efeito de estrelas no fundo
         self.stars = []
@@ -150,12 +196,18 @@ class Menu:
                     if self.btn_start.check_click(mouse_pos):
                         self.start_game = True
                         self.running = False
+                    elif self.btn_tutorial.check_click(mouse_pos):
+                        self.show_tutorial = True
+                        self.running = False
                     elif self.btn_quit.check_click(mouse_pos):
                         self.running = False
                         
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.start_game = True
+                        self.running = False
+                    elif event.key == pygame.K_t:
+                        self.show_tutorial = True
                         self.running = False
                     elif event.key == pygame.K_ESCAPE:
                         self.running = False
@@ -167,7 +219,13 @@ class Menu:
             
             # Verifica hover nos botões
             self.btn_start.check_hover(mouse_pos)
+            self.btn_tutorial.check_hover(mouse_pos)
             self.btn_quit.check_hover(mouse_pos)
+            
+            # Atualiza animações dos botões
+            self.btn_start.update(dt)
+            self.btn_tutorial.update(dt)
+            self.btn_quit.update(dt)
             
             # Desenha
             self.screen.blit(self.background, (0, 0))
@@ -180,24 +238,31 @@ class Menu:
             # Desenha UI
             self.draw_title()
             self.btn_start.draw(self.screen, self.button_font)
+            self.btn_tutorial.draw(self.screen, self.button_font)
             self.btn_quit.draw(self.screen, self.button_font)
             
-         
+            # Dica de teclas
+            hint_text = self.subtitle_font.render("ENTER - Jogar | T - Tutorial | ESC - Sair", True, (180, 180, 180))
+            hint_rect = hint_text.get_rect(center=(WIDTH // 2, HEIGHT - 40))
+            self.screen.blit(hint_text, hint_rect)
             
             pygame.display.flip()
         
-        return self.start_game
+        return (self.start_game, self.show_tutorial)
 
 def show_menu():
-    """Função principal para mostrar o menu e retornar se deve iniciar o jogo."""
+    """Função principal para mostrar o menu e retornar (start_game, show_tutorial)."""
     menu = Menu()
-    should_start = menu.run()
-    return should_start
+    result = menu.run()
+    return result
 
 if __name__ == "__main__":
     # Teste do menu standalone
-    if show_menu():
+    start_game, show_tutorial = show_menu()
+    if start_game:
         print("Iniciando jogo...")
+    elif show_tutorial:
+        print("Mostrando tutorial...")
     else:
         print("Saindo...")
     pygame.quit()
