@@ -35,6 +35,23 @@ class TutorialScreen:
         pygame.draw.rect(panel, (*self.accent_color, alpha), (0, 0, w, h), 3, border_radius=15)
         self.screen.blit(panel, (x, y))
         
+
+    def icon_color_for(self, icon: str, text: str):
+        """Escolhe cor do ícone por contexto: Espinho/Perigo -> vermelho; Rampa -> laranja; Portal/Portais -> roxo; Pausar -> amarelo; Reiniciar -> laranja; Cooperacao -> verde; default -> accent."""
+        low = (text or '').lower()
+        if icon in ('X', '!') or 'espinho' in low or 'perigo' in low:
+            return (235, 90, 90)
+        if 'rampa' in low:
+            return (255, 180, 80)
+        if 'portal' in low or 'portais' in low:
+            return (160, 120, 255)
+        if icon == 'P' or 'pausar' in low:
+            return (255, 220, 100)
+        if icon == 'R' or 'reiniciar' in low:
+            return (255, 150, 80)
+        if icon == '&' or 'cooperacao' in low:
+            return (100, 255, 150)
+        return self.accent_color
     def draw_key(self, x, y, text, size=50):
         key_surf = pygame.Surface((size, size), pygame.SRCALPHA)
         pygame.draw.rect(key_surf, (0, 0, 0, 150), (3, 3, size, size), border_radius=8)
@@ -200,18 +217,17 @@ class TutorialScreen:
         self.draw_tile_example(tile_x + spacing*4, tile_y, "rampa_sobe", "Rampa")
         
         rules_y = panel_y + 190
-        self.draw_panel(80, rules_y, panel_w, 220)
+        self.draw_panel(80, rules_y, panel_w, 130)
         
         rules = [
-            ("!", "Dino vermelho so pode pisar em plataformas vermelhas"),
-            ("!", "Dino azul so pode pisar em plataformas azuis"),
             ("X", "Espinhos matam instantaneamente (voce reaparece)"),
             ("*", "Ambos os jogadores devem chegar aos portais")
         ]
         
         y_offset = rules_y + 30
         for icon, rule_text in rules:
-            icon_surf = self.text_font.render(icon, True, self.accent_color)
+            icon_color = self.icon_color_for(icon, rule_text)
+            icon_surf = self.text_font.render(icon, True, icon_color)
             self.screen.blit(icon_surf, (110, y_offset))
             
             text = self.text_font.render(rule_text, True, self.text_color)
@@ -228,8 +244,6 @@ class TutorialScreen:
         self.draw_panel(panel_x, panel_y, panel_w, panel_h)
         
         tips = [
-            ("*", "Coyote Time", "Pule ate 0.15s apos sair da plataforma"),
-            ("+", "Buffer de Pulo", "Pressione pular antes de pousar"),
             ("P", "Pausar", "ESC ou P pausa o jogo"),
             ("R", "Reiniciar", "R reinicia o nivel (no pause)"),
             ("&", "Cooperacao", "Trabalhem juntos para vencer!"),
@@ -237,48 +251,13 @@ class TutorialScreen:
         
         y_offset = panel_y + 40
         for icon, tip_title, tip_text in tips:
-            icon_text = self.heading_font.render(icon, True, self.accent_color)
+            icon_color = self.icon_color_for(icon, tip_title + " " + tip_text)
+            icon_text = self.heading_font.render(icon, True, icon_color)
             self.screen.blit(icon_text, (panel_x + 30, y_offset - 5))
             
             title_text = self.text_font.render(tip_title, True, self.accent_color)
             self.screen.blit(title_text, (panel_x + 90, y_offset))
             
-            desc_text = self.small_font.render(tip_text, True, self.dim_text)
-            self.screen.blit(desc_text, (panel_x + 90, y_offset + 32))
-            
-            y_offset += 70
-    
-    def draw_page_indicators(self):
-        """Page 3: Tips & Tricks"""
-        # Title
-        title = self.heading_font.render("Dicas & Truques", True, self.accent_color)
-        title_rect = title.get_rect(center=(WIDTH // 2, 60))
-        self.screen.blit(title, title_rect)
-        
-        # Tips panel - maior e melhor posicionado
-        panel_x, panel_y = 80, 120
-        panel_w, panel_h = 800, 380
-        self.draw_panel(panel_x, panel_y, panel_w, panel_h)
-        
-        tips = [
-            ("*", "Coyote Time", "Pule ate 0.15s apos sair da plataforma"),
-            ("+", "Buffer de Pulo", "Pressione pular antes de pousar"),
-            ("P", "Pausar", "ESC ou P pausa o jogo"),
-            ("R", "Reiniciar", "R reinicia o nivel (no pause)"),
-            ("&", "Cooperacao", "Trabalhem juntos para vencer!"),
-        ]
-        
-        y_offset = panel_y + 40
-        for icon, tip_title, tip_text in tips:
-            # Icon
-            icon_text = self.heading_font.render(icon, True, self.accent_color)
-            self.screen.blit(icon_text, (panel_x + 30, y_offset - 5))
-            
-            # Title
-            title_text = self.text_font.render(tip_title, True, self.accent_color)
-            self.screen.blit(title_text, (panel_x + 90, y_offset))
-            
-            # Description
             desc_text = self.small_font.render(tip_text, True, self.dim_text)
             self.screen.blit(desc_text, (panel_x + 90, y_offset + 32))
             

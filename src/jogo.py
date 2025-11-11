@@ -365,13 +365,20 @@ class Game:
 
 
 if __name__ == "__main__":
-    start_game, show_tut = show_menu()
-    
-    if show_tut:
-        if show_tutorial():
-            Game().run()
-    elif start_game:
-        Game().run()
-    
-    pygame.quit()
+    ret = show_menu()
 
+if isinstance(ret, tuple):
+    start_game, show_tut = ret
+else:
+    start_game = bool(ret)
+    show_tut = True  # ou False, conforme você quiser o padrão
+
+if start_game:
+    game = Game()
+    if show_tut:
+        if not show_tutorial():
+            pygame.quit()
+            raise SystemExit
+    game.run()
+else:
+    pygame.quit()
