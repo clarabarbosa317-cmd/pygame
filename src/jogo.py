@@ -150,7 +150,12 @@ class Game:
                         timeover = False
                     elif event.key == pygame.K_RETURN:
                         # Volta ao menu
-                        if show_menu():
+                        start_game, show_tut = show_menu()
+                        if show_tut:
+                            if show_tutorial():
+                                self.current_level = 1
+                                self.load_current_level()
+                        elif start_game:
                             self.current_level = 1
                             self.load_current_level()
                         else:

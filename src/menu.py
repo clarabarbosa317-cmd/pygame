@@ -80,19 +80,26 @@ class Menu:
         button_x = WIDTH // 2 - button_width // 2
         
         self.btn_start = MenuButton(
-            button_x, HEIGHT // 2 + 50, 
+            button_x, HEIGHT // 2 + 30, 
             button_width, button_height,
             "INICIAR", (70, 180, 70), (90, 220, 90)
         )
         
+        self.btn_tutorial = MenuButton(
+            button_x, HEIGHT // 2 + 120,
+            button_width, button_height,
+            "TUTORIAL", (70, 120, 220), (90, 150, 255)
+        )
+        
         self.btn_quit = MenuButton(
-            button_x, HEIGHT // 2 + 150,
+            button_x, HEIGHT // 2 + 210,
             button_width, button_height,
             "SAIR", (180, 70, 70), (220, 90, 90)
         )
         
         self.running = True
         self.start_game = False
+        self.show_tutorial = False
         
         # Efeito de estrelas no fundo
         self.stars = []
@@ -150,6 +157,10 @@ class Menu:
                     if self.btn_start.check_click(mouse_pos):
                         self.start_game = True
                         self.running = False
+                    elif self.btn_tutorial.check_click(mouse_pos):
+                        self.start_game = True
+                        self.show_tutorial = True
+                        self.running = False
                     elif self.btn_quit.check_click(mouse_pos):
                         self.running = False
                         
@@ -167,6 +178,7 @@ class Menu:
             
             # Verifica hover nos botões
             self.btn_start.check_hover(mouse_pos)
+            self.btn_tutorial.check_hover(mouse_pos)
             self.btn_quit.check_hover(mouse_pos)
             
             # Desenha
@@ -180,24 +192,29 @@ class Menu:
             # Desenha UI
             self.draw_title()
             self.btn_start.draw(self.screen, self.button_font)
+            self.btn_tutorial.draw(self.screen, self.button_font)
             self.btn_quit.draw(self.screen, self.button_font)
             
          
             
             pygame.display.flip()
         
-        return self.start_game
+        return (self.start_game, self.show_tutorial)
 
 def show_menu():
-    """Função principal para mostrar o menu e retornar se deve iniciar o jogo."""
+    """Função principal para mostrar o menu e retornar (start_game, show_tutorial)."""
     menu = Menu()
-    should_start = menu.run()
-    return should_start
+    result = menu.run()
+    return result
 
 if __name__ == "__main__":
     # Teste do menu standalone
-    if show_menu():
-        print("Iniciando jogo...")
+    start_game, show_tut = show_menu()
+    if start_game:
+        if show_tut:
+            print("Iniciando jogo com tutorial...")
+        else:
+            print("Iniciando jogo...")
     else:
         print("Saindo...")
     pygame.quit()
