@@ -6,6 +6,9 @@ from assets import load_player_sprites, load_sounds, load_backgrounds
 from sprites import Player
 from level import load_level, build_level_surface
 from menu import show_menu
+from tutorial import Tutorial
+from menu import show_menu  # já existe
+
 
 class Game:
     def __init__(self):
@@ -257,10 +260,19 @@ class Game:
 
 
 if __name__ == "__main__":
-    # Mostra o menu primeiro
     if show_menu():
-        # Se o jogador escolheu iniciar, roda o jogo
-        Game().run()
+        game = Game()
+        # Mostra tutorial (passa screen, fontes, clock e FPS do próprio jogo)
+        tut = Tutorial(
+            screen=game.screen,
+            font=game.font,
+            small_font=game.small_font,
+            clock=game.clock,
+            fps=FPS,                 # use a constante já definida no seu projeto
+            show_menu_cb=show_menu,  # ESC no tutorial retorna ao menu
+        )
+        if tut.run() and game.running:
+            game.run()
     else:
-        # Se escolheu sair, apenas encerra
         pygame.quit()
+
