@@ -60,18 +60,14 @@ def _slice_portal_spritesheet(sheet):
     
     # Portais são 3x maiores que um TILE (72x72 pixels)
     portal_size = TILE * 3
-    
     frames = []
     for i in range(n):
-        rect = pygame.Rect(i * frame_w, 0, frame_w, frame_h)
-        frame = sheet.subsurface(rect).copy()
-        # Redimensiona para 3x o tamanho do TILE
+        frame = sheet.subsurface(pygame.Rect(i * frame_w, 0, frame_w, frame_h)).copy()
         frame = pygame.transform.scale(frame, (portal_size, portal_size))
         frames.append(frame)
     return frames
 
-def load_portal_sprites():
-    """Carrega e fatia os spritesheets dos portais"""
+def _load_portal_frames():
     try:
         portal_red_sheet = load_image("portal_vermelho.png")
         portal_red_frames = _slice_portal_spritesheet(portal_red_sheet)
@@ -114,54 +110,66 @@ def load_level(level_path, groups):
         lines[-2] = "".join(lines[-2])
 
     tex = load_tile_textures()
-    grid = [list(line) for line in lines]
+    portal_red_frames, portal_blue_frames = _load_portal_frames()
 
-    # Carrega frames dos portais animados
-    portal_red_frames, portal_blue_frames = load_portal_sprites()
+    grid = lines
 
-    for j, line in enumerate(lines):
-        for i, ch in enumerate(line):
+    for j, row in enumerate(grid):
+        for i, ch in enumerate(row):
             x = i * TILE
             y = j * TILE
 
             if ch == "#":
                 image = _choose_solid_texture(i, j, grid, tex)
                 t = Tile(x, y, image, solid=True)
-                all_tiles.add(t); solids.add(t)
-
-            elif ch == "/":   # rampa sobe (para a direita)
-                t = Tile(x, y, tex["rampa_sobe"], slope="up")
-                all_tiles.add(t); ramps.add(t)
-
-            elif ch == "\\":  # rampa desce (para a direita)
-                t = Tile(x, y, tex["rampa_desce"], slope="down")
-                all_tiles.add(t); ramps.add(t)
+                groups["all_tiles"].add(t)
+                groups["solids"].add(t)
 
             elif ch == "R":
-                t = Tile(x, y, None, color_kind="red")
-                all_tiles.add(t); color_tiles.add(t)
+                image = tex.get("tile_vermelho") if "tile_vermelho" in tex else None
+                t = Tile(x, y, image, solid=True, color_kind="red")
+                groups["all_tiles"].add(t)
+                groups["color_tiles"].add(t)
 
             elif ch == "B":
-                t = Tile(x, y, None, color_kind="blue")
-                all_tiles.add(t); color_tiles.add(t)
+                image = tex.get("tile_azul") if "tile_azul" in tex else None
+                t = Tile(x, y, image, solid=True, color_kind="blue")
+                groups["all_tiles"].add(t)
+                groups["color_tiles"].add(t)
 
             elif ch == "X":
-                t = Tile(x, y, tex["espinho"], deadly=True)
-                all_tiles.add(t); hazards.add(t)
+                image = tex.get("espinho", None)
+                t = Tile(x, y, image, deadly=True)
+                groups["all_tiles"].add(t)
+                groups["hazards"].add(t)
 
-            elif ch == "G":  # Portal VERMELHO (goal para dino vermelho)
+            elif ch == "/":
+                image = tex.get("rampa_sobe", None)
+                t = Tile(x, y, image, solid=True, slope="up")
+                groups["all_tiles"].add(t)
+                groups["ramps"].add(t)
+
+            elif ch == "\\":
+                image = tex.get("rampa_desce", None)
+                t = Tile(x, y, image, solid=True, slope="down")
+                groups["all_tiles"].add(t)
+                groups["ramps"].add(t)
+
+            elif ch == "G":
                 if portal_red_frames:
-                    t = AnimatedTile(x, y, portal_red_frames, goal_for="red")
+                    t = AnimatedTile(x - (TILE), y - (TILE*2), portal_red_frames, goal_for="red")
                 else:
                     t = Tile(x, y, None, goal_for="red")
-                all_tiles.add(t); doors.add(t)
+                groups["all_tiles"].add(t)
+                groups["doors"].add(t)
 
-            elif ch == "H":  # Portal AZUL (goal para dino azul)
+            elif ch == "H":
                 if portal_blue_frames:
-                    t = AnimatedTile(x, y, portal_blue_frames, goal_for="blue")
+                    t = AnimatedTile(x - (TILE), y - (TILE*2), portal_blue_frames, goal_for="blue")
                 else:
                     t = Tile(x, y, None, goal_for="blue")
-                all_tiles.add(t); doors.add(t)
+                groups["all_tiles"].add(t)
+                groups["doors"].add(t)
 
             elif ch == "1":
                 spawns["red"]  = (x + TILE // 2, y + TILE)
@@ -179,7 +187,7 @@ def load_level(level_path, groups):
     return spawns
 
 def build_level_surface(all_tiles):
-    surf = pygame.Surface((WIDTH, HEIGHT))
-    surf.fill(BG)
+    # Camada transparente apenas com os tiles/objetos (sem pintar fundo).
+    surf = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
     all_tiles.draw(surf)
     return surf
