@@ -19,6 +19,7 @@
 - ✅ **Cooperação obrigatória**: Ambos os jogadores devem chegar aos seus portais
 - ✅ **Mecânica de cores**: Cada dinossauro só pode pisar em plataformas da sua cor
 - ✅ **6 níveis desafiadores**: Da tutorial ao desafio final
+- ✅ **Inimigos móveis**: Meteoros com comportamentos únicos nos níveis finais
 - ✅ **Sistema de áudio imersivo**: Música ambiente dinâmica e efeitos sonoros
 - ✅ **Física de plataforma**: Rampas, saltos e gravidade realista
 - ✅ **Temporizador por fase**: Corrida contra o tempo com dificuldade crescente
@@ -35,6 +36,7 @@ Cada jogador deve levar seu dinossauro até o portal da sua cor antes que o temp
 - 🔴 **Dinossauro Vermelho**: Só pode pisar em plataformas **vermelhas** e **neutras**
 - 🔵 **Dinossauro Azul**: Só pode pisar em plataformas **azuis** e **neutras**
 - ⚠️ **Espinhos matam**: Colidir com espinhos causa respawn instantâneo
+- ☄️ **Inimigos matam**: Tocar em meteoros causa respawn instantâneo (níveis 5-6)
 - ✨ **Ambos devem chegar**: Os dois jogadores precisam entrar nos portais
 - ⏰ **Cuidado com o tempo**: Cada nível tem um limite de tempo
 
@@ -96,20 +98,22 @@ python jogo.py
 
 ## 🗺️ Níveis
 
-| Nível | Nome | Tempo | Dificuldade |
-|-------|------|-------|-------------|
-| 1 | **Primeiros Passos** | 45s | ⭐ Tutorial |
-| 2 | **Plataformas Coloridas** | 60s | ⭐⭐ Fácil |
-| 3 | **Campo Minado** | 75s | ⭐⭐⭐ Médio |
-| 4 | **Saltos Precisos** | 80s | ⭐⭐⭐ Médio |
-| 5 | **Corrida Contra o Tempo** | 70s | ⭐⭐⭐⭐ Difícil |
-| 6 | **Desafio Final** | 90s | ⭐⭐⭐⭐⭐ Muito Difícil |
+| Nível | Nome | Tempo | Inimigos | Dificuldade |
+|-------|------|-------|----------|-------------|
+| 1 | **Primeiros Passos** | 45s | - | ⭐ Tutorial |
+| 2 | **Plataformas Coloridas** | 60s | - | ⭐⭐ Fácil |
+| 3 | **Campo Minado** | 75s | - | ⭐⭐⭐ Médio |
+| 4 | **Saltos Precisos** | 80s | - | ⭐⭐⭐ Médio |
+| 5 | **Corrida Contra o Tempo** | 70s | 5 ☄️ | ⭐⭐⭐⭐ Difícil |
+| 6 | **Desafio Final** | 90s | 8 ☄️ | ⭐⭐⭐⭐⭐ Muito Difícil |
 
 ### 💡 Dicas
 - 🤝 **Comunique-se**: Cooperação é essencial!
 - 👀 **Planeje antes**: Observe o nível antes de agir
 - ⚡ **Cuidado com o tempo**: Nível 5 é especialmente rápido
 - 🔄 **Pratique**: Cada morte é uma oportunidade de aprender
+- ☄️ **Observe os padrões**: Todos os inimigos têm movimentos previsíveis
+- 💡 **Aviso visual**: Meteoros cadentes piscam antes de cair!
 
 ---
 
@@ -136,12 +140,13 @@ A música muda dinamicamente baseada no nível:
 
 ## 🎨 Mecânicas do Jogo
 
-### Plataformas
+### Plataformas e Obstáculos
 - **Normais** (cinza): Qualquer dinossauro pode usar
 - **Vermelhas**: Apenas o dinossauro vermelho
 - **Azuis**: Apenas o dinossauro azul
 - **Rampas**: Permitem movimentos diagonais
 - **Espinhos**: Matam instantaneamente
+- **Meteoros**: Inimigos móveis que matam ao tocar (níveis 5-6)
 
 ### Física
 - **Gravidade realista**: Os dinossauros caem naturalmente
@@ -154,6 +159,29 @@ A música muda dinamicamente baseada no nível:
 - 🔵 **Portal Azul**: Objetivo do jogador azul
 - ✨ **Animados**: Efeito visual atraente
 - ⚡ **Simultâneos**: Ambos devem entrar para vencer
+
+### Inimigos (Níveis 5-6)
+Os níveis finais incluem inimigos móveis que aumentam o desafio:
+
+#### ☄️ **Meteoro Patrulheiro (M)**
+- **Comportamento**: Patrulha horizontal entre dois pontos
+- **Perigo**: Movimento constante e previsível
+- **Estratégia**: Observe o padrão e passe quando ele estiver longe
+- **Onde**: Nível 5 (3x) e Nível 6 (4x)
+
+#### 💥 **Meteoro Cadente (F)**
+- **Comportamento**: Fica no teto e cai em intervalos regulares
+- **Aviso**: Pisca 0.5 segundos antes de cair!
+- **Estratégia**: Corra durante o aviso ou espere cair para passar
+- **Onde**: Nível 5 (1x) e Nível 6 (2x)
+
+#### 🦅 **Patrulha Vertical (V)**
+- **Comportamento**: Voa para cima e para baixo
+- **Perigo**: Bloqueia áreas específicas
+- **Estratégia**: Timing perfeito de pulo
+- **Onde**: Nível 5 (1x) e Nível 6 (1x)
+
+> ⚠️ **Atenção**: Qualquer contato com inimigos causa morte instantânea e respawn!
 
 ---
 
@@ -229,6 +257,7 @@ pygame/
 
 ### Versão Atual
 - ✅ 6 níveis completos
+- ✅ Sistema de inimigos móveis (3 tipos)
 - ✅ Sistema de áudio completo
 - ✅ Tutorial interativo
 - ✅ Menu principal com opções
