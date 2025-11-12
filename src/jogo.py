@@ -109,9 +109,34 @@ class Game:
         self.play_level_music()
 
     def show_victory_screen(self):
-        """Mostra tela de vitória"""
+        """Mostra tela de vitória melhorada com animações"""
+        import math
+        import random
+        
         victory = True
+        anim_time = 0.0
+        
+        # Cria estrelas/partículas de celebração
+        particles = []
+        for _ in range(50):
+            particles.append({
+                'x': random.randint(0, WIDTH),
+                'y': random.randint(-HEIGHT, 0),
+                'speed': random.uniform(1, 3),
+                'size': random.randint(2, 5),
+                'color': random.choice([
+                    (255, 255, 100),  # Amarelo
+                    (255, 200, 100),  # Laranja
+                    (100, 255, 255),  # Ciano
+                    (255, 100, 255),  # Rosa
+                    (100, 255, 100),  # Verde
+                ])
+            })
+        
         while victory:
+            dt = self.clock.tick(FPS) / 1000.0
+            anim_time += dt
+            
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
@@ -126,25 +151,112 @@ class Game:
                         self.load_current_level()
                         victory = False
 
-            # Desenha tela de vitória
-            self.screen.fill((20, 20, 40))
-
-            # Título
-            title = self.font.render("VITÓRIA!", True, (255, 255, 100))
-            title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 3))
-            self.screen.blit(title, title_rect)
-
-            # Mensagem
-            msg = self.small_font.render("Você completou todos os 6 níveis!", True, (200, 200, 200))
-            msg_rect = msg.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-            self.screen.blit(msg, msg_rect)
-
-            inst = self.small_font.render("ENTER - Reiniciar | ESC - Sair", True, (160, 160, 160))
-            inst_rect = inst.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 60))
-            self.screen.blit(inst, inst_rect)
+            # Background gradiente
+            for y in range(HEIGHT):
+                ratio = y / HEIGHT
+                r = int(20 + (50 - 20) * ratio)
+                g = int(20 + (30 - 20) * ratio)
+                b = int(60 + (80 - 60) * ratio)
+                pygame.draw.line(self.screen, (r, g, b), (0, y), (WIDTH, y))
+            
+            # Atualiza e desenha partículas
+            for particle in particles:
+                particle['y'] += particle['speed']
+                if particle['y'] > HEIGHT:
+                    particle['y'] = -10
+                    particle['x'] = random.randint(0, WIDTH)
+                
+                # Desenha estrela
+                pygame.draw.circle(self.screen, particle['color'], 
+                                 (int(particle['x']), int(particle['y'])), 
+                                 particle['size'])
+            
+            # Painel central
+            panel_w, panel_h = 700, 400
+            panel_x = (WIDTH - panel_w) // 2
+            panel_y = (HEIGHT - panel_h) // 2
+            
+            # Sombra do painel
+            shadow_surf = pygame.Surface((panel_w + 10, panel_h + 10), pygame.SRCALPHA)
+            pygame.draw.rect(shadow_surf, (0, 0, 0, 100), (0, 0, panel_w + 10, panel_h + 10), border_radius=20)
+            self.screen.blit(shadow_surf, (panel_x + 5, panel_y + 5))
+            
+            # Painel principal
+            panel_surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+            pygame.draw.rect(panel_surf, (40, 40, 70, 230), (0, 0, panel_w, panel_h), border_radius=20)
+            pygame.draw.rect(panel_surf, (255, 215, 0), (0, 0, panel_w, panel_h), 5, border_radius=20)
+            self.screen.blit(panel_surf, (panel_x, panel_y))
+            
+            # Título com efeito pulsante
+            pulse = 1.0 + 0.1 * math.sin(anim_time * 3)
+            title_font = pygame.font.Font(None, 100)
+            title_text = "🏆 VITÓRIA! 🏆"
+            
+            # Sombra do título
+            title_shadow = title_font.render(title_text, True, (0, 0, 0))
+            title_shadow_scaled = pygame.transform.scale(
+                title_shadow, 
+                (int(title_shadow.get_width() * pulse), int(title_shadow.get_height() * pulse))
+            )
+            shadow_rect = title_shadow_scaled.get_rect(center=(WIDTH // 2 + 3, panel_y + 80 + 3))
+            self.screen.blit(title_shadow_scaled, shadow_rect)
+            
+            # Título principal
+            title = title_font.render(title_text, True, (255, 215, 0))
+            title_scaled = pygame.transform.scale(
+                title, 
+                (int(title.get_width() * pulse), int(title.get_height() * pulse))
+            )
+            title_rect = title_scaled.get_rect(center=(WIDTH // 2, panel_y + 80))
+            self.screen.blit(title_scaled, title_rect)
+            
+            # Linha decorativa
+            line_y = panel_y + 140
+            pygame.draw.line(self.screen, (255, 215, 0), 
+                           (panel_x + 50, line_y), 
+                           (panel_x + panel_w - 50, line_y), 3)
+            
+            # Mensagem principal
+            msg1 = self.font.render("Parabéns!", True, (255, 255, 255))
+            msg1_rect = msg1.get_rect(center=(WIDTH // 2, panel_y + 180))
+            self.screen.blit(msg1, msg1_rect)
+            
+            msg2 = self.small_font.render("Você completou todos os 6 níveis!", True, (200, 255, 200))
+            msg2_rect = msg2.get_rect(center=(WIDTH // 2, panel_y + 220))
+            self.screen.blit(msg2, msg2_rect)
+            
+            # Dinossauros comemorando (animados)
+            dino_bounce = abs(math.sin(anim_time * 4)) * 10
+            
+            # Dinossauro vermelho
+            if hasattr(self, 'p1'):
+                dino_red = self.p1.frames_right[int(anim_time * 8) % len(self.p1.frames_right)]
+                dino_red_scaled = pygame.transform.scale(dino_red, (60, 60))
+                self.screen.blit(dino_red_scaled, (panel_x + 80, panel_y + 260 - dino_bounce))
+            
+            # Dinossauro azul
+            if hasattr(self, 'p2'):
+                dino_blue = self.p2.frames_right[int(anim_time * 8) % len(self.p2.frames_right)]
+                dino_blue_scaled = pygame.transform.scale(dino_blue, (60, 60))
+                self.screen.blit(dino_blue_scaled, (panel_x + panel_w - 140, panel_y + 260 - dino_bounce))
+            
+            # Texto "Equipe Perfeita!"
+            team_text = self.small_font.render("🤝 Equipe Perfeita! 🤝", True, (255, 200, 100))
+            team_rect = team_text.get_rect(center=(WIDTH // 2, panel_y + 280))
+            self.screen.blit(team_text, team_rect)
+            
+            # Instruções com efeito pulsante
+            inst_alpha = int(200 + 55 * math.sin(anim_time * 4))
+            inst1 = self.small_font.render("ENTER - Jogar Novamente", True, (100, 255, 100))
+            inst1.set_alpha(inst_alpha)
+            inst1_rect = inst1.get_rect(center=(WIDTH // 2, panel_y + 340))
+            self.screen.blit(inst1, inst1_rect)
+            
+            inst2 = self.small_font.render("ESC - Sair do Jogo", True, (255, 100, 100))
+            inst2_rect = inst2.get_rect(center=(WIDTH // 2, panel_y + 370))
+            self.screen.blit(inst2, inst2_rect)
 
             pygame.display.flip()
-            self.clock.tick(FPS)
 
     def show_timeover_screen(self):
         """Mostra tela quando o tempo acaba"""
