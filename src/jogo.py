@@ -55,6 +55,7 @@ class Game:
         self.hazards = pygame.sprite.Group()
         self.doors = pygame.sprite.Group()
         self.ramps = pygame.sprite.Group()
+        self.enemies = pygame.sprite.Group()
 
         # Caminho do nível
         level_filename = f"level{self.current_level}.txt"
@@ -68,6 +69,7 @@ class Game:
             "hazards": self.hazards,
             "doors": self.doors,
             "ramps": self.ramps,
+            "enemies": self.enemies,
         })
 
         # Cria surface do nível (apenas tiles/objetos, transparente)
@@ -362,10 +364,13 @@ class Game:
 
             keys = pygame.key.get_pressed()
 
-            # Atualiza tiles animados (portais)
+            # Atualiza tiles animados (portais) e inimigos
             for tile in self.all_tiles:
                 if hasattr(tile, 'update'):
                     tile.update(dt)
+            
+            for enemy in self.enemies:
+                enemy.update(dt)
 
             # Atualiza jogadores (se não estiver no delay de conclusão)
             if self.level_complete_timer <= 0:
@@ -373,6 +378,12 @@ class Game:
                                self.doors, self.ramps, (pygame.K_a, pygame.K_d, pygame.K_w), dt)
                 self.p2.update(keys, self.solids, self.color_tiles, self.hazards,
                                self.doors, self.ramps, (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP), dt)
+                
+                # Verifica colisão com inimigos
+                if pygame.sprite.spritecollide(self.p1, self.enemies, False):
+                    self.p1._respawn()
+                if pygame.sprite.spritecollide(self.p2, self.enemies, False):
+                    self.p2._respawn()
 
             # Verifica conclusão do nível
             if self.check_level_complete() and self.level_complete_timer <= 0:
@@ -390,6 +401,7 @@ class Game:
             else:
                 self.screen.fill(BG)
             self.screen.blit(self.level_surface, (0, 0))
+            self.enemies.draw(self.screen)  # Desenha inimigos
             self.players.draw(self.screen)
             self.draw_ui()
 

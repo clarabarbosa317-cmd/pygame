@@ -1,6 +1,6 @@
 import pygame
 from settings import TILE, WIDTH, HEIGHT, COLS, ROWS, NEUTRAL, RED, BLUE, HAZARD, GOAL_R, GOAL_B, BG
-from sprites import Tile, AnimatedTile
+from sprites import Tile, AnimatedTile, PatrolEnemy, FallingEnemy, VerticalPatrolEnemy
 from assets import load_tile_textures, load_image
 
 # Legenda dos níveis:
@@ -15,6 +15,9 @@ from assets import load_tile_textures, load_image
 # 'H' = portal AZUL (goal para dino azul)
 # '1' = spawn do dino vermelho
 # '2' = spawn do dino azul
+# 'M' = meteoro patrulheiro horizontal
+# 'F' = meteoro que cai do teto
+# 'V' = patrulha vertical (voa)
 
 def _normalize_lines(lines):
     lines = [line.rstrip("\n") for line in lines]
@@ -175,6 +178,41 @@ def load_level(level_path, groups):
                 spawns["red"]  = (x + TILE // 2, y + TILE)
             elif ch == "2":
                 spawns["blue"] = (x + TILE // 2, y + TILE)
+            
+            # Inimigos
+            elif ch == "M":
+                # Meteoro patrulheiro horizontal
+                try:
+                    meteor_img = load_image("meteoro.png")
+                    meteor_img = pygame.transform.scale(meteor_img, (TILE, TILE))
+                    enemy = PatrolEnemy(x, y, meteor_img, patrol_distance=5)
+                    if "enemies" in groups:
+                        groups["enemies"].add(enemy)
+                except Exception:
+                    print("Aviso: meteoro.png não encontrado")
+            
+            elif ch == "F":
+                # Meteoro que cai do teto
+                try:
+                    meteor_img = load_image("meteoro2.png")
+                    meteor_img = pygame.transform.scale(meteor_img, (TILE, TILE))
+                    enemy = FallingEnemy(x, y, meteor_img, fall_delay=2.0)
+                    if "enemies" in groups:
+                        groups["enemies"].add(enemy)
+                except Exception:
+                    print("Aviso: meteoro2.png não encontrado")
+            
+            elif ch == "V":
+                # Patrulha vertical (voa)
+                try:
+                    meteor_img = load_image("meteoro.png")
+                    meteor_img = pygame.transform.scale(meteor_img, (TILE, TILE))
+                    meteor_img = pygame.transform.rotate(meteor_img, 45)  # Rotaciona para parecer diferente
+                    enemy = VerticalPatrolEnemy(x, y, meteor_img, patrol_distance=4)
+                    if "enemies" in groups:
+                        groups["enemies"].add(enemy)
+                except Exception:
+                    print("Aviso: meteoro.png não encontrado para patrulha vertical")
 
     # Spawns padrão caso não encontre no mapa
     if spawns["red"]  is None: 

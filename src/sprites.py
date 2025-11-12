@@ -81,6 +81,141 @@ class AnimatedTile(pygame.sprite.Sprite):
         self.image = self.frames[int(self.anim_index)]
 
 
+# ------------------- Inimigos -------------------
+class PatrolEnemy(pygame.sprite.Sprite):
+    """
+    Inimigo que patrulha horizontalmente entre dois pontos
+    """
+    def __init__(self, x, y, image, patrol_distance=5):
+        super().__init__()
+        self.image = image
+        self.rect = self.image.get_rect(topleft=(x, y))
+        
+        self.start_x = x
+        self.patrol_distance = patrol_distance * TILE  # Distância em tiles
+        self.end_x = self.start_x + self.patrol_distance
+        
+        self.pos = pygame.Vector2(x, y)
+        self.speed = 1.5  # Velocidade de patrulha
+        self.direction = 1  # 1 = direita, -1 = esquerda
+        
+        self.deadly = True
+    
+    def update(self, dt):
+        """Atualiza movimento de patrulha"""
+        # Move na direção atual
+        self.pos.x += self.speed * self.direction
+        
+        # Inverte direção nos limites
+        if self.direction > 0 and self.pos.x >= self.end_x:
+            self.direction = -1
+        elif self.direction < 0 and self.pos.x <= self.start_x:
+            self.direction = 1
+        
+        self.rect.x = int(self.pos.x)
+
+
+class FallingEnemy(pygame.sprite.Sprite):
+    """
+    Inimigo que cai do teto em intervalos regulares
+    """
+    def __init__(self, x, y, image, fall_delay=2.0):
+        super().__init__()
+        self.original_image = image
+        self.image = image.copy()
+        self.start_y = y
+        self.rect = self.image.get_rect(topleft=(x, y))
+        
+        self.pos = pygame.Vector2(x, y)
+        self.fall_speed = 0
+        self.is_falling = False
+        self.is_warning = False
+        
+        self.fall_delay = fall_delay  # Tempo entre quedas
+        self.warning_time = 0.5  # Tempo de aviso piscando
+        self.timer = 0
+        self.blink_timer = 0
+        self.visible = True
+        
+        self.deadly = True
+    
+    def update(self, dt):
+        """Atualiza comportamento de queda"""
+        self.timer += dt
+        
+        if not self.is_falling and not self.is_warning:
+            # Esperando para avisar
+            if self.timer >= self.fall_delay:
+                self.is_warning = True
+                self.timer = 0
+        
+        elif self.is_warning:
+            # Piscar aviso
+            self.blink_timer += dt
+            if self.blink_timer >= 0.1:  # Piscar a cada 0.1s
+                self.visible = not self.visible
+                self.blink_timer = 0
+                # Altera alpha para piscar
+                if self.visible:
+                    self.image = self.original_image.copy()
+                else:
+                    self.image = self.original_image.copy()
+                    self.image.set_alpha(80)
+            
+            # Terminar aviso e começar queda
+            if self.timer >= self.warning_time:
+                self.is_warning = False
+                self.is_falling = True
+                self.fall_speed = 0
+                self.timer = 0
+                self.image = self.original_image.copy()
+        
+        elif self.is_falling:
+            # Cai com aceleração
+            self.fall_speed += GRAVITY * 2  # Cai mais rápido que jogador
+            self.pos.y += self.fall_speed
+            self.rect.y = int(self.pos.y)
+            
+            # Sai da tela = reset
+            if self.rect.top > HEIGHT:
+                self.pos.y = self.start_y
+                self.rect.y = int(self.pos.y)
+                self.is_falling = False
+                self.fall_speed = 0
+                self.timer = 0
+
+
+class VerticalPatrolEnemy(pygame.sprite.Sprite):
+    """
+    Inimigo que patrulha verticalmente (voa)
+    """
+    def __init__(self, x, y, image, patrol_distance=4):
+        super().__init__()
+        self.image = image
+        self.rect = self.image.get_rect(topleft=(x, y))
+        
+        self.start_y = y
+        self.patrol_distance = patrol_distance * TILE
+        self.end_y = self.start_y + self.patrol_distance
+        
+        self.pos = pygame.Vector2(x, y)
+        self.speed = 1.2
+        self.direction = 1  # 1 = baixo, -1 = cima
+        
+        self.deadly = True
+    
+    def update(self, dt):
+        """Atualiza movimento vertical"""
+        self.pos.y += self.speed * self.direction
+        
+        if self.direction > 0 and self.pos.y >= self.end_y:
+            self.direction = -1
+        elif self.direction < 0 and self.pos.y <= self.start_y:
+            self.direction = 1
+        
+        self.rect.y = int(self.pos.y)
+
+
 # ------------------- PLAYER -------------------
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, color_name, frames, sounds=None):
