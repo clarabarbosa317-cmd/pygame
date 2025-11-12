@@ -35,12 +35,12 @@ DEFAULT_LEVEL_TIME = 60
 
 # Ajuste os tempos por nível aqui, se desejar
 LEVEL_TIMES = {
-    1: 60,
-    2: 70,
-    3: 80,
-    4: 90,
-    5: 100,
-    6: 110,
+    1: 45,   
+    2: 60,   
+    3: 75,   
+    4: 80,   
+    5: 70,   
+    6: 90,   
 }
 
 # Nomes dos níveis
