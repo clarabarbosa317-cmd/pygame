@@ -27,6 +27,11 @@ class Game:
         self.sounds = load_sounds()
         self.backgrounds = load_backgrounds()   # <<< fundos por fase
 
+        # Sistema de áudio
+        self.music_channel = pygame.mixer.Channel(0)  # Canal dedicado para música
+        self.music_volume = 0.15
+        self.sfx_volume = 1.0
+
         # Fonte para UI
         self.font = pygame.font.Font(None, 48)
         self.small_font = pygame.font.Font(None, 32)
@@ -73,8 +78,8 @@ class Game:
 
         # Cria ou reposiciona jogadores
         if not hasattr(self, 'p1'):
-            self.p1 = Player(spawns["red"][0], spawns["red"][1], "red", self.player_frames["red"])
-            self.p2 = Player(spawns["blue"][0], spawns["blue"][1], "blue", self.player_frames["blue"])
+            self.p1 = Player(spawns["red"][0], spawns["red"][1], "red", self.player_frames["red"], self.sounds)
+            self.p2 = Player(spawns["blue"][0], spawns["blue"][1], "blue", self.player_frames["blue"], self.sounds)
             self.players = pygame.sprite.Group(self.p1, self.p2)
         else:
             # Reposiciona jogadores existentes
@@ -97,6 +102,9 @@ class Game:
         # Pause state
         self.paused = False
         self.pause_ticks = 0
+        
+        # Inicia música do nível
+        self.play_level_music()
 
     def show_victory_screen(self):
         """Mostra tela de vitória"""
@@ -138,6 +146,8 @@ class Game:
 
     def show_timeover_screen(self):
         """Mostra tela quando o tempo acaba"""
+        self.music_channel.stop()
+        self.play_sfx('defeat')
         timeover = True
         while timeover and self.running:
             for event in pygame.event.get():
@@ -201,12 +211,25 @@ class Game:
             t_rect = t_surf.get_rect(topright=(WIDTH - 10, 10))
             self.screen.blit(t_surf, t_rect)
 
+    def play_sfx(self, sound_name):
+        """Toca um efeito sonoro"""
+        if sound_name in self.sounds:
+            self.sounds[sound_name].play()
+    
+    def play_level_music(self):
+        """Inicia música do nível atual"""
+        if 'music' in self.sounds and self.current_level in self.sounds['music']:
+            music = self.sounds['music'][self.current_level]
+            music.set_volume(self.music_volume)
+            self.music_channel.play(music, loops=-1)
+
     def check_level_complete(self):
         """Conclui quando os dois jogadores estão no portal correto"""
         return self.p1.in_goal and self.p2.in_goal
 
     def advance_level(self):
         """Avança para o próximo nível ou mostra vitória."""
+        self.play_sfx('victory')
         self.current_level += 1
         if self.current_level > self.total_levels:
             self.show_victory_screen()
@@ -215,6 +238,9 @@ class Game:
     
     def show_pause_menu(self):
         """Mostra menu de pausa com design melhorado"""
+        # Pausa a música
+        self.music_channel.pause()
+        
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 180))  # Semi-transparent black
         
@@ -238,12 +264,15 @@ class Game:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_p:
                         paused = False
                         self.paused = False
+                        self.music_channel.unpause()  # Retoma música
                     elif event.key == pygame.K_r:
                         # Restart level
+                        self.music_channel.unpause()
                         self.load_current_level()
                         paused = False
                         self.paused = False
                     elif event.key == pygame.K_q:
+                        self.music_channel.unpause()
                         start_game, show_tut = show_menu()
                         if show_tut:
                             if show_tutorial():

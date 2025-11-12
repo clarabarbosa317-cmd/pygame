@@ -83,9 +83,10 @@ class AnimatedTile(pygame.sprite.Sprite):
 
 # ------------------- PLAYER -------------------
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, color_name, frames):
+    def __init__(self, x, y, color_name, frames, sounds=None):
         super().__init__()
         self.color_name = color_name  # "red" | "blue"
+        self.sounds = sounds or {}
 
         # animação
         self.frames_right = frames[:]
@@ -101,6 +102,7 @@ class Player(pygame.sprite.Sprite):
         self.pos = pygame.Vector2(self.rect.x, self.rect.y)
         self.vel = pygame.Vector2(0, 0)
         self.on_ground = False
+        self.was_on_ground = False  # Para detectar pousos
         self.spawn = pygame.Vector2(self.rect.midbottom)
 
         self.in_goal = False
@@ -116,6 +118,9 @@ class Player(pygame.sprite.Sprite):
         if keys[jump] and self.on_ground:
             self.vel.y = -JUMP_SPEED
             self.on_ground = False
+            # Som de pulo
+            if 'jump' in self.sounds:
+                self.sounds['jump'].play()
 
     def apply_gravity(self):
         self.vel.y += GRAVITY
@@ -135,6 +140,9 @@ class Player(pygame.sprite.Sprite):
                 if self.vel.y > 0:
                     self.rect.bottom = t.rect.top
                     self.vel.y = 0
+                    # Som de pousar (só se estava no ar)
+                    if not self.on_ground and not self.was_on_ground and 'land' in self.sounds:
+                        self.sounds['land'].play()
                     self.on_ground = True
                 elif self.vel.y < 0:
                     self.rect.top = t.rect.bottom
@@ -142,10 +150,14 @@ class Player(pygame.sprite.Sprite):
                 self.pos.y = self.rect.y
 
     def _respawn(self):
+        # Som de morte
+        if 'death' in self.sounds:
+            self.sounds['death'].play()
         self.rect.midbottom = self.spawn
         self.pos.update(self.rect.x, self.rect.y)
         self.vel.update(0, 0)
         self.on_ground = False
+        self.was_on_ground = False
         self.in_goal = False
 
     def check_underfoot(self, color_tiles, hazards):
@@ -230,6 +242,7 @@ class Player(pygame.sprite.Sprite):
 
     def update(self, keys, solids, color_tiles, hazards, doors, ramps, controls, dt):
         left, right, jump = controls
+        self.was_on_ground = self.on_ground
         self.handle_input(keys, left, right, jump)
         self.apply_gravity()
 
